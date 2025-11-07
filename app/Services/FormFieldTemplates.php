@@ -10,6 +10,40 @@ class FormFieldTemplates
             'common' => [
                 'label' => 'Campos Comuns',
                 'fields' => [
+                    'full_name' => [
+                        'label' => 'Nome Completo',
+                        'icon' => 'heroicon-o-user',
+                        'config' => [
+                            'label' => 'Nome Completo',
+                            'name' => 'full_name',
+                            'type' => 'text',
+                            'required' => true,
+                            'validation' => [
+                                'min' => 3,
+                                'max' => 255,
+                            ],
+                            'ui' => [
+                                'placeholder' => 'Digite seu nome completo',
+                            ],
+                        ],
+                    ],
+                    'company_name' => [
+                        'label' => 'Razão Social',
+                        'icon' => 'heroicon-o-building-office-2',
+                        'config' => [
+                            'label' => 'Razão Social',
+                            'name' => 'company_name',
+                            'type' => 'text',
+                            'required' => true,
+                            'validation' => [
+                                'min' => 3,
+                                'max' => 255,
+                            ],
+                            'ui' => [
+                                'placeholder' => 'Nome da empresa',
+                            ],
+                        ],
+                    ],
                     'cnpj' => [
                         'label' => 'CNPJ',
                         'icon' => 'heroicon-o-building-office',

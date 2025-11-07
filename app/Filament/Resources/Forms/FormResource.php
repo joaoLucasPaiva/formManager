@@ -28,32 +28,41 @@ class FormResource extends Resource
     {
         return $schema->schema([
             Components\TextInput::make('title')
+                ->label('Título do Formulário')
                 ->required()
-                ->maxLength(255),
+                ->maxLength(255)
+                ->live(onBlur: true)
+                ->afterStateUpdated(function ($state, callable $set, $context) {
+                    // Só gera slug automaticamente na criação ou se o slug estiver vazio
+                    if ($context === 'create' || empty($context)) {
+                        $set('slug', str($state)->slug()->toString());
+                    }
+                })
+                ->helperText('Nome do formulário que será exibido'),
 
-            Components\TextInput::make('slug')
-                ->required()
-                ->unique(ignoreRecord: true),
+            Components\Hidden::make('slug')
+                ->default(fn ($record) => $record?->slug ?? ''),
 
             Components\Textarea::make('description')
-                ->rows(3),
+                ->label('Descrição')
+                ->rows(3)
+                ->helperText('Descreva o objetivo deste formulário (opcional)'),
 
             Components\Select::make('audience')
+                ->label('Público-alvo')
                 ->options([
                     'company'   => 'Empresa',
                     'inspector' => 'Vistoriador',
                 ])
                 ->required()
-                ->default('company'),
+                ->default('company')
+                ->helperText('Quem irá preencher este formulário?'),
 
-            Components\Toggle::make('is_published')->disabled(),
-            Components\Toggle::make('is_locked')->disabled(),
-            Components\DateTimePicker::make('published_at')->disabled(),
-
-            // no v4 recente, prefira addActionLabel() (addButtonLabel é deprecated)
             Components\KeyValue::make('meta')
-                ->addActionLabel('Adicionar')
-                ->reorderable(),
+                ->label('Metadados (Opcional)')
+                ->addActionLabel('Adicionar Metadado')
+                ->reorderable()
+                ->helperText('Informações adicionais em formato chave-valor'),
         ])
         // trava a edição quando bloqueado
         ->disabled(fn (?FormModel $record) => $record?->is_locked === true);
@@ -65,23 +74,70 @@ class FormResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('title')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->description(fn (FormModel $record) => $record->is_locked ? '🔒 Publicado e bloqueado' : '✏️ Rascunho'),
 
                 Tables\Columns\TextColumn::make('slug')
-                    ->copyable(),
+                    ->copyable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 // BadgeColumn pode estar deprecated nos stubs; usa badge() na TextColumn
                 Tables\Columns\TextColumn::make('audience')
-                    ->badge(),
+                    ->badge()
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'company' => 'Empresa',
+                        'inspector' => 'Vistoriador',
+                        default => $state,
+                    }),
 
-                Tables\Columns\IconColumn::make('is_published')->boolean(),
-                Tables\Columns\IconColumn::make('is_locked')->boolean(),
-                Tables\Columns\TextColumn::make('published_at')->dateTime()->since(),
-                Tables\Columns\TextColumn::make('created_at')->dateTime()->since(),
+                Tables\Columns\TextColumn::make('status')
+                    ->label('Status')
+                    ->badge()
+                    ->getStateUsing(fn (FormModel $record): string =>
+                        $record->is_locked ? 'Publicado' : 'Rascunho'
+                    )
+                    ->color(fn (FormModel $record): string =>
+                        $record->is_locked ? 'success' : 'warning'
+                    ),
+
+                Tables\Columns\TextColumn::make('published_at')
+                    ->label('Publicado em')
+                    ->dateTime()
+                    ->since()
+                    ->placeholder('Não publicado')
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Criado em')
+                    ->dateTime()
+                    ->since()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->recordActions([
                 EditAction::make()
                     ->hidden(fn (FormModel $record) => $record->is_locked),
+
+                Action::make('view')
+                    ->label('Ver Formulário')
+                    ->icon('heroicon-o-eye')
+                    ->color('gray')
+                    ->visible(fn (FormModel $record) => $record->is_published)
+                    ->url(fn (FormModel $record): string => route('form.show', $record->slug))
+                    ->openUrlInNewTab(),
+
+                Action::make('copy_link')
+                    ->label('Copiar Link')
+                    ->icon('heroicon-o-clipboard')
+                    ->color('info')
+                    ->visible(fn (FormModel $record) => $record->is_published)
+                    ->requiresConfirmation()
+                    ->modalHeading('Link do Formulário')
+                    ->modalDescription('Copie o link abaixo para compartilhar o formulário:')
+                    ->modalContent(fn (FormModel $record) => view('filament.modals.copy-link', [
+                        'url' => route('form.show', $record->slug)
+                    ]))
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Fechar'),
 
                 Action::make('publish')
                     ->label('Publicar')
@@ -89,6 +145,9 @@ class FormResource extends Resource
                     ->color('success')
                     ->visible(fn (FormModel $record) => ! $record->is_published)
                     ->requiresConfirmation()
+                    ->modalHeading('Publicar Formulário')
+                    ->modalDescription('Após publicar, o formulário será bloqueado e não poderá mais ser editado. Tem certeza?')
+                    ->modalSubmitActionLabel('Sim, publicar')
                     ->action(fn (FormModel $record) => $record->update([
                         'is_published' => true,
                         'is_locked'    => true,
@@ -100,7 +159,9 @@ class FormResource extends Resource
     public static function getRelations(): array
     {
         return [
+            RelationManagers\SectionsRelationManager::class,
             RelationManagers\FieldsRelationManager::class,
+            RelationManagers\SubmissionsRelationManager::class,
         ];
     }
 

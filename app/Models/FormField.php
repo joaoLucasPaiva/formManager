@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 class FormField extends Model
 {
     protected $fillable = [
-        'form_id','form_section_id','label','name','type','required','validation','ui','position','active'
+        'form_id','form_section_id','label','name','type','required','validation','ui','position','active','is_identifier'
     ];
     protected $casts = [
         'required' => 'bool',
         'active' => 'bool',
+        'is_identifier' => 'bool',
         'validation' => 'array',
         'ui' => 'array',
     ];
