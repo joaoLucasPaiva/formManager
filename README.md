@@ -74,8 +74,8 @@ Antes de começar, certifique-se de ter instalado:
 ### Passo 1️⃣: Clone o Repositório
 
 ```bash
-git clone https://github.com/seu-usuario/formularios.git
-cd formularios
+git clone https://github.com/joaoLucasPaiva/formManager.git formManager
+cd formManager
 ```
 
 ### Passo 2️⃣: Instale as Dependências
@@ -177,7 +177,7 @@ Para quem já conhece o Laravel, aqui vai o resumo completo:
 
 ```bash
 # 1. Clone e entre no diretório
-git clone https://github.com/seu-usuario/formularios.git && cd formularios
+git clone https://github.com/joaoLucasPaiva/formManager.git formManager && cd formManager
 
 # 2. Instale dependências
 composer install && npm install
